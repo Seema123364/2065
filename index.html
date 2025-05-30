@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>3069 Game</title>
+<style>
+  #game-grid {
+    width: 260px;
+    margin: 20px auto;
+    background: #bbada0;
+    border-radius: 6px;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(4, 60px);
+    grid-gap: 10px;
+  }
+  .cell {
+    width: 60px;
+    height: 60px;
+    background: #cdc1b4;
+    border-radius: 3px;
+    font-size: 24px;
+    line-height: 60px;
+    font-weight: bold;
+    text-align: center;
+    color: #776e65;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+
+<div id="game-grid"></div>
+
+<script>
+class GameTile {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.merged = false;
+    this.value = "";
+  }
+  tileID() {
+    return `[data-coord='{"x":${this.x},"y":${this.y}}']`;
+  }
+}
+
+class GameGrid {
+  constructor(ele) {
+    this.element = ele;
+    this.tiles = {};
+    this._initialiseBoard();
+  }
+
+  _initialiseBoard() {
+    // Create cells in the DOM grid
+    for (let y = 3; y >= 0; y--) {
+      for (let x = 0; x < 4; x++) {
+        let cell = document.createElement("div");
+        cell.classList.add("cell");
+        cell.setAttribute("data-coord", `{"x":${x},"y":${y}}`);
+        this.element.appendChild(cell);
+        this._initialiseTiles(x, y);
+      }
+    }
+    this.updateTiles();
+    this._addNumber();
+    this._addNumber();
+  }
+
+  _initialiseTiles(x, y) {
+    this.tiles[`${x},${y}`] = new GameTile(x, y);
+  }
+
+  _emptyCellArray() {
+    let array = [];
+    for (let key of Object.keys(this.tiles)) {
+      let tile = this.tiles[key];
+      if (tile.value === "") {
+        array.push(tile);
+      }
+    }
+    return array;
+  }
+
+  _addNumber() {
+    let emptyTiles = this._emptyCellArray();
+
+    if (emptyTiles.length === 0) return;
+
+    let i = Math.floor(Math.random() * emptyTiles.length);
+    let value = Math.random() > 0.1 ? 3 : 6;
+    emptyTiles[i].value = value;
+    this.updateTiles();
+  }
+
+  tileStyles() {
+    return {
+      3: { color: "#7f6e61", background: "#eee4da" },
+      6: { color: "#776e65", background: "#ede0c8" },
+      12: { color: "#f9f6f2", background: "#f2b179" },
+      24: { color: "#f9f6f2", background: "#f59563" },
+      48: { color: "#f9f6f2", background: "#f67c5f" },
+      96: { color: "#f9f6f2", background: "#ea5a38" },
+      192: { color: "#f9f6f2", background: "#efce71" },
+      384: { color: "#f9f6f2", background: "#f1d33f" },
+      768: { color: "#f9f6f2", background: "#ecc850" },
+      1536: { color: "#ffffff", background: "#e3ba14" },
+      3072: { color: "#ffffff", background: "#ecc402" },
+    };
+  }
+
+  updateTiles() {
+    for (let key of Object.keys(this.tiles)) {
+      let tile = this.tiles[key];
+      let cell = this.element.querySelector(tile.tileID());
+      tile.merged = false;
+      cell.textContent = tile.value;
+      let style = this.tileStyles()[tile.value];
+      if (style !== undefined) {
+        cell.style.background = style.background;
+        cell.style.color = style.color;
+      } else {
+        cell.style.background = "#cdc1b4";
+        cell.style.color = "#776e65";
+      }
+    }
+  }
+
+  slideX(dir) {
+    let left = dir === "left";
+    let moveTaken = true;
+    let addNumber = false;
+    while (moveTaken) {
+      moveTaken = false;
+      for (let y = 0; y < 4; y++) {
+        for (
+          let x = left ? 1 : 2;
+          left ? x < 4 : x >= 0;
+          left ? x++ : x--
+        ) {
+          let currentTile = this.tiles[`${x},${y}`];
+          let nextTile = this.tiles[`${left ? x - 1 : x + 1},${y}`];
+          if (currentTile.value === "") continue;
+
+          if (nextTile.value === "") {
+            nextTile.value = currentTile.value;
+            currentTile.value = "";
+            moveTaken = true;
+            addNumber = true;
+          } else if (
+            nextTile.value === currentTile.value &&
+            !nextTile.merged &&
+            !currentTile.merged
+          ) {
+            nextTile.value += currentTile.value;
+            nextTile.merged = true;
+            currentTile.value = "";
+            moveTaken = true;
+            addNumber = true;
+          }
+        }
+      }
+    }
+    if (addNumber) {
+      this._addNumber();
+    } else {
+      this.updateTiles();
+    }
+  }
+
+  slideY(dir) {
+    let up = dir === "up";
+    let moveTaken = true;
+    let addNumber = false;
+    while (moveTaken) {
+      moveTaken = false;
+      for (let x = 0; x < 4; x++) {
+        for (
+          let y = up ? 1 : 2;
+          up ? y < 4 : y >= 0;
+          up ? y++ : y--
+        ) {
+          let currentTile = this.tiles[`${x},${y}`];
+          let nextTile = this.tiles[`${x},${up ? y - 1 : y + 1}`];
+          if (currentTile.value === "") continue;
+
+          if (nextTile.value === "") {
+            nextTile.value = currentTile.value;
+            currentTile.value = "";
+            moveTaken = true;
+            addNumber = true;
+          } else if (
+            nextTile.value === currentTile.value &&
+            !nextTile.merged &&
+            !currentTile.merged
+          ) {
+            nextTile.value += currentTile.value;
+            nextTile.merged = true;
+            currentTile.value = "";
+            moveTaken = true;
+            addNumber = true;
+          }
+        }
+      }
+    }
+    if (addNumber) {
+      this._addNumber();
+    } else {
+      this.updateTiles();
+    }
+  }
+}
+
+let gameContainer = document.getElementById("game-grid");
+let game = new GameGrid(gameContainer);
+
+document.body.addEventListener("keydown", (e) => {
+  switch (e.keyCode) {
+    case 37:
+      game.slideX("left");
+      e.preventDefault();
+      break;
+    case 38:
+      game.slideY("up");
+      e.preventDefault();
+      break;
+    case 39:
+      game.slideX("right");
+      e.preventDefault();
+      break;
+    case 40:
+      game.slideY("down");
+      e.preventDefault();
+      break;
+  }
+});
+</script>
+
+</body>
+</html>
